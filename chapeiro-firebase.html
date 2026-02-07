@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cozinha - Chapeiro</title>
+  
+  <!-- Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  
+  <style>
+    :root {
+      --primary: #D4A574;
+      --secondary: #0A1F0A;
+      --accent: #2D5016;
+      --success: #52A447;
+      --warning: #F39C12;
+      --bg-dark: #0A1F0A;
+      --text-light: #FFFFFF;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, var(--bg-dark) 0%, #1a3a1a 100%);
+      min-height: 100vh;
+      color: var(--text-light);
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(212, 165, 116, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid var(--primary);
+    }
+    
+    .header h1 {
+      font-size: 28px;
+      color: var(--primary);
+    }
+    
+    .refresh-btn {
+      padding: 12px 24px;
+      background: rgba(212, 165, 116, 0.2);
+      border: 2px solid var(--primary);
+      color: var(--primary);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+    
+    .refresh-btn:hover {
+      background: var(--primary);
+      color: var(--secondary);
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      border-radius: 15px;
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: #B8B8B8;
+      margin-bottom: 10px;
+    }
+    
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: var(--primary);
+    }
+    
+    .pedidos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+    }
+    
+    .pedido-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 15px;
+      padding: 20px;
+      border: 2px solid var(--primary);
+      box-shadow: 0 4px 20px rgba(212, 165, 116, 0.3);
+      transition: all 0.3s ease;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    .pedido-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 30px rgba(212, 165, 116, 0.5);
+    }
+    
+    .pedido-card.preparando {
+      border-color: var(--warning);
+      background: rgba(243, 156, 18, 0.1);
+    }
+    
+    .pedido-numero {
+      font-size: 32px;
+      font-weight: bold;
+      color: var(--primary);
+      text-align: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--primary);
+    }
+    
+    .pedido-info {
+      margin-bottom: 15px;
+    }
+    
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .info-label {
+      color: #B8B8B8;
+      font-weight: 600;
+    }
+    
+    .pedido-itens {
+      background: rgba(212, 165, 116, 0.1);
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      border: 1px solid var(--primary);
+    }
+    
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    .item-nome {
+      font-weight: 600;
+      color: var(--text-light);
+    }
+    
+    .item-qty {
+      background: var(--primary);
+      color: var(--secondary);
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .tempo-espera {
+      text-align: center;
+      padding: 10px;
+      background: rgba(243, 156, 18, 0.2);
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 14px;
+      color: var(--warning);
+      font-weight: 600;
+    }
+    
+    .pedido-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+    }
+    
+    .btn:active {
+      transform: scale(0.97);
+    }
+    
+    .btn-warning {
+      background: linear-gradient(135deg, var(--warning) 0%, #E67E22 100%);
+      color: white;
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, var(--success) 0%, #3E8E33 100%);
+      color: white;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: #B8B8B8;
+    }
+    
+    .empty-icon {
+      font-size: 100px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+    
+    .badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--danger);
+      color: white;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>👨‍🍳 Cozinha</h1>
+      <p style="font-size: 14px; opacity: 0.9; margin-top: 5px;">Gestão de Preparo</p>
+    </div>
+    <button class="refresh-btn" onclick="location.reload()">🔄 Atualizar</button>
+  </div>
+  
+  <div class="container">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">⏳ Aguardando Preparo</div>
+        <div class="stat-value" id="stat-aguardando">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">👨‍🍳 Em Preparo</div>
+        <div class="stat-value" id="stat-preparando">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">✅ Prontos Hoje</div>
+        <div class="stat-value" id="stat-prontos">0</div>
+      </div>
+    </div>
+    
+    <div class="pedidos-grid" id="pedidos-lista"></div>
+  </div>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAdAQ0PZ3OlOO4i-t7gTi1LqZFnDJXn-eg",
+      authDomain: "sistema-padaria-a1ee0.firebaseapp.com",
+      databaseURL: "https://sistema-padaria-a1ee0-default-rtdb.firebaseio.com",
+      projectId: "sistema-padaria-a1ee0",
+      storageBucket: "sistema-padaria-a1ee0.firebasestorage.app",
+      messagingSenderId: "1011463014195",
+      appId: "1:1011463014195:web:79f941437e29f57a8aa046"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    let pedidosCache = [];
+    
+    function inicializar() {
+      carregarPedidos();
+      setInterval(carregarPedidos, 3000); // Atualiza a cada 3 segundos
+    }
+    
+    function carregarPedidos() {
+      database.ref('pedidos').on('value', (snapshot) => {
+        pedidosCache = [];
+        snapshot.forEach((child) => {
+          const pedido = child.val();
+          // Apenas pedidos pagos ou em preparo
+          if (pedido.status === 'pago' || pedido.status === 'preparando') {
+            pedidosCache.push(pedido);
+          }
+        });
+        atualizarEstatisticas();
+        renderizarPedidos();
+      });
+    }
+    
+    function atualizarEstatisticas() {
+      const hoje = new Date().toDateString();
+      const pedidosHoje = pedidosCache.filter(p => 
+        new Date(p.dataHora).toDateString() === hoje
+      );
+      
+      const aguardando = pedidosHoje.filter(p => p.status === 'pago').length;
+      const preparando = pedidosHoje.filter(p => p.status === 'preparando').length;
+      
+      // Contar prontos hoje de todos os pedidos
+      database.ref('pedidos').once('value', (snapshot) => {
+        let prontos = 0;
+        snapshot.forEach((child) => {
+          const p = child.val();
+          if (p.status === 'pronto' && new Date(p.dataHora).toDateString() === hoje) {
+            prontos++;
+          }
+        });
+        document.getElementById('stat-prontos').textContent = prontos;
+      });
+      
+      document.getElementById('stat-aguardando').textContent = aguardando;
+      document.getElementById('stat-preparando').textContent = preparando;
+    }
+    
+    function renderizarPedidos() {
+      const container = document.getElementById('pedidos-lista');
+      
+      // Ordenar: preparando primeiro, depois pagos
+      const pedidosOrdenados = pedidosCache.sort((a, b) => {
+        if (a.status === 'preparando' && b.status !== 'preparando') return -1;
+        if (a.status !== 'preparando' && b.status === 'preparando') return 1;
+        return new Date(a.dataHora) - new Date(b.dataHora);
+      });
+      
+      if (pedidosOrdenados.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-icon">🎉</div>
+            <h2 style="margin-bottom: 10px; color: var(--success);">Tudo Pronto!</h2>
+            <p>Nenhum pedido aguardando preparo</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = pedidosOrdenados.map(pedido => {
+        const tempoEspera = Math.floor((Date.now() - new Date(pedido.dataHora)) / 60000);
+        const isPreparando = pedido.status === 'preparando';
+        
+        return `
+          <div class="pedido-card ${isPreparando ? 'preparando' : ''}">
+            <div class="pedido-numero">#${pedido.numero}</div>
+            
+            <div class="pedido-info">
+              <div class="info-row">
+                <span class="info-label">👤 Cliente:</span>
+                <span>${pedido.cliente}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">📞 Telefone:</span>
+                <span>${pedido.telefone}</span>
+              </div>
+            </div>
+            
+            <div class="tempo-espera">
+              ⏱️ Aguardando há ${tempoEspera} min
+            </div>
+            
+            <div class="pedido-itens">
+              ${pedido.itens.map(item => `
+                <div class="item-row">
+                  <span class="item-nome">${item.emoji} ${item.nome}</span>
+                  <span class="item-qty">${item.quantidade}x</span>
+                </div>
+              `).join('')}
+            </div>
+            
+            <div class="pedido-actions">
+              ${!isPreparando ? `
+                <button class="btn btn-warning" onclick="iniciarPreparo(${pedido.numero})">
+                  👨‍🍳 Iniciar Preparo
+                </button>
+              ` : `
+                <button class="btn btn-success" onclick="marcarPronto(${pedido.numero})">
+                  ✅ Marcar Pronto
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function iniciarPreparo(numero) {
+      database.ref('pedidos/' + numero + '/status').set('preparando')
+        .then(() => {
+          console.log(`✅ Pedido #${numero} em preparo`);
+        })
+        .catch((error) => {
+          alert('Erro: ' + error.message);
+        });
+    }
+    
+    function marcarPronto(numero) {
+      if (!confirm(`Marcar pedido #${numero} como pronto?`)) return;
+      
+      database.ref('pedidos/' + numero + '/status').set('pronto')
+        .then(() => {
+          alert(`🎉 Pedido #${numero} pronto! Cliente será notificado.`);
+        })
+        .catch((error) => {
+          alert('Erro: ' + error.message);
+        });
+    }
+    
+    window.onload = inicializar;
+  </script>
+</body>
+</html>
